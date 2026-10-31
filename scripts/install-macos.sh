@@ -78,7 +78,21 @@ for _ in {1..20}; do
   launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break
   sleep 0.5
 done
-launchctl bootstrap "$DOMAIN" "$PLIST"
+# Clear any "disabled" override left from an earlier install.
+launchctl enable "$DOMAIN/$LABEL" 2>/dev/null || true
+if ! launchctl bootstrap "$DOMAIN" "$PLIST"; then
+  cat >&2 <<HELP
+
+macOS refused to start the background service. Common causes:
+  - Background items are switched off for it: System Settings → General →
+    Login Items & Extensions → "Allow in the Background" → turn on node /
+    harmony-revive, then re-run this script.
+  - You're connected over SSH: run this script in Terminal on the Mac itself.
+For a detailed reason, run:
+  sudo launchctl bootstrap $DOMAIN $PLIST
+HELP
+  exit 1
+fi
 
 sleep 2
 HOSTNAME_LOCAL="$(scutil --get LocalHostName 2>/dev/null || hostname -s).local"
