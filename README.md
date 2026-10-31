@@ -29,7 +29,24 @@ The small server runs on any always-on computer on your home network: a Raspberr
 
 You need the hub's IP address. In the Harmony app it's on the hub's **Versions** screen (for example `10.0.0.26`). A DHCP reservation for the hub in your router keeps that address from changing.
 
-### Option A: Docker (Raspberry Pi, NAS, any computer)
+### Option A: Mac (recommended if you have one that stays on)
+
+Install Node.js 20 or newer first (`brew install node`, or the installer from [nodejs.org](https://nodejs.org)). Then in Terminal:
+
+```sh
+git clone https://github.com/Schaefer50/harmony-revive.git ~/harmony-revive
+cd ~/harmony-revive
+./scripts/install-macos.sh 10.0.0.26
+```
+
+This builds the app and sets it to start automatically whenever you're logged in to the Mac. It prints the address to open on your phone, e.g. `http://cerebro.local:8787`.
+
+- If macOS asks whether `node` may accept incoming connections, click **Allow**.
+- The Mac must not go to sleep. In System Settings, under Energy or Battery → Options depending on your macOS version, turn on the setting that prevents automatic sleep when the display is off.
+- To update later: `cd ~/harmony-revive && git pull && ./scripts/install-macos.sh 10.0.0.26`
+- To remove: `./scripts/install-macos.sh --uninstall`
+
+### Option B: Docker (Raspberry Pi, NAS, any computer)
 
 ```sh
 git clone https://github.com/Schaefer50/harmony-revive.git
@@ -38,7 +55,7 @@ cd harmony-revive
 docker compose up -d --build
 ```
 
-### Option B: Node.js (Mac, PC, Linux)
+### Option C: Node.js by hand (any computer)
 
 Requires Node.js 20 or newer.
 
