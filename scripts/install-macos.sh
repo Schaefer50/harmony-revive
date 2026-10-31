@@ -78,6 +78,9 @@ for _ in {1..20}; do
   launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break
   sleep 0.5
 done
+# Stop a copy started by hand (e.g. with nohup); it would hold the port.
+pkill -f "server/dist/index.js" 2>/dev/null || true
+
 # Clear any "disabled" override left from an earlier install.
 launchctl enable "$DOMAIN/$LABEL" 2>/dev/null || true
 if ! launchctl bootstrap "$DOMAIN" "$PLIST"; then
