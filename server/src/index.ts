@@ -23,6 +23,14 @@ const manager = new HubManager(dataDir);
 await manager.init(seeds);
 
 const server = createApi({ manager, webRoot, token: process.env.API_TOKEN || undefined });
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use; is another copy of Harmony Revive running?`);
+  } else {
+    console.error(err);
+  }
+  process.exit(1);
+});
 server.listen(port, () => {
   console.log(`Harmony Revive running on http://localhost:${port}`);
   for (const hub of manager.list()) console.log(`  hub: ${hub.id}`);
