@@ -160,3 +160,12 @@ describe('bridge API', () => {
     assert.equal(manager.list().length, 0);
   });
 });
+
+describe('connection errors', () => {
+  test('reports a refused connection with a readable reason', async () => {
+    const hub = new HarmonyHub('127.0.0.1', { port: 1, autoReconnect: false });
+    await assert.rejects(hub.start());
+    assert.match(hub.error ?? '', /refused the connection/);
+    hub.stop();
+  });
+});

@@ -98,6 +98,24 @@ export function hubPost(host: string, port: number, cmd: string, timeoutMs = 5_0
   });
 }
 
+/** Turn low-level network errors into something a person can act on. */
+export function describeError(err: NodeJS.ErrnoException, host: string, port: number): string {
+  switch (err.code) {
+    case 'EHOSTUNREACH':
+    case 'ENETUNREACH':
+      return (
+        `No route to ${host}. If the hub is on and has this IP, macOS may be blocking local network ` +
+        `access for node: System Settings → Privacy & Security → Local Network → turn on node. (${err.code})`
+      );
+    case 'ECONNREFUSED':
+      return `${host} refused the connection on port ${port}. Check this is the hub's IP. (${err.code})`;
+    case 'ETIMEDOUT':
+      return `${host} did not answer. Check the hub is powered and on this network. (${err.code})`;
+    default:
+      return err.message;
+  }
+}
+
 export class HarmonyHub extends EventEmitter<HarmonyHubEvents> {
   readonly host: string;
   readonly port: number;
@@ -177,7 +195,7 @@ export class HarmonyHub extends EventEmitter<HarmonyHubEvents> {
       this.error = null;
       await this.refresh();
     } catch (err) {
-      this.error = (err as Error).message;
+      this.error = describeError(err as NodeJS.ErrnoException, this.host, this.port);
       // Drop any half-set-up socket; its close handler ignores it once detached.
       const ws = this.ws;
       this.ws = null;

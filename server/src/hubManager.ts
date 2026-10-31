@@ -80,7 +80,15 @@ export class HubManager extends EventEmitter<HubManagerEvents> {
   private attach(host: string, port?: number): HarmonyHub {
     const hub = new HarmonyHub(host, { port });
     this.hubs.set(hub.id, hub);
-    hub.on('state', () => this.emit('changed', hubState(hub)));
+    let lastLogged: string | null = null;
+    hub.on('state', () => {
+      const line = hub.connected ? `connected (${hub.name})` : hub.error ? `not connected: ${hub.error}` : null;
+      if (line && line !== lastLogged) {
+        console.log(`[${new Date().toISOString()}] hub ${hub.id} ${line}`);
+        lastLogged = line;
+      }
+      this.emit('changed', hubState(hub));
+    });
     hub.on('config', () => this.emit('changed', hubState(hub)));
     hub.start().catch(() => {
       /* error is surfaced via hub state; reconnect is automatic */
