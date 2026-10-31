@@ -72,6 +72,12 @@ cat >"$PLIST" <<EOF
 EOF
 
 launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+# bootout returns before the old service is fully gone; bootstrapping too
+# soon fails with "Bootstrap failed: 5: Input/output error".
+for _ in {1..20}; do
+  launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break
+  sleep 0.5
+done
 launchctl bootstrap "$DOMAIN" "$PLIST"
 
 sleep 2
