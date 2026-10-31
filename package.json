@@ -1,0 +1,22 @@
+{
+  "name": "harmony-revive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloud-free control for Logitech Harmony Hub + Elite remotes",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "build": "npm run build -w web && npm run build -w server",
+    "start": "npm start -w server",
+    "dev": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "mock-hub": "npm run mock-hub -w server",
+    "test": "npm test -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

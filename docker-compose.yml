@@ -1,0 +1,14 @@
+services:
+  harmony-revive:
+    build: .
+    container_name: harmony-revive
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      # Comma-separated hub IPs. You can also add hubs from the app.
+      HARMONY_HUBS: "10.0.0.26"
+      # Optional: require this token in the app (Settings → API token).
+      # API_TOKEN: "change-me"
+    volumes:
+      - ./data:/data
