@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, getToken, setToken, subscribe, type HubConfig, type HubState } from './api';
+import { activityIcon, deviceIcon, gradientFor, Icons } from './icons';
 import { Remote } from './Remote';
 
 const SELECTED_HUB_KEY = 'harmony-revive.hub';
@@ -91,6 +92,7 @@ export function App() {
   const activities = config?.activities ?? [];
   const devices = config?.devices ?? [];
   const running = activities.find((a) => a.id === runningId) ?? null;
+  const targetKind = activities.some((a) => a.id === target) ? 'activity' : 'device';
   const targetGroups =
     activities.find((a) => a.id === target)?.groups ?? devices.find((d) => d.id === target)?.groups ?? null;
 
@@ -100,40 +102,19 @@ export function App() {
   };
 
   const busy = hub?.activityStatus === 'starting' || hub?.activityStatus === 'stopping';
+  const starting = hub?.activityStatus === 'starting';
 
   return (
     <div className="app">
       <header>
-        <div className="hub-picker">
+        <button type="button" className="hub-picker" onClick={() => hubs.length > 1 && setSettingsOpen(true)}>
           <span className={`dot ${online && hub?.connected ? 'ok' : 'bad'}`} />
-          {hubs.length > 1 ? (
-            <select value={hub?.id ?? ''} onChange={(e) => setHubId(e.target.value)}>
-              {hubs.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <strong>{hub?.name ?? 'Harmony Revive'}</strong>
-          )}
-        </div>
-        <div className="header-actions">
-          <button type="button" className="icon" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
-            ⚙
-          </button>
-          {hub && (
-            <button
-              type="button"
-              className="power"
-              aria-label="All off"
-              disabled={!hub.connected || hub.currentActivityId === '-1'}
-              onClick={() => api.powerOff(hub.id).catch(fail)}
-            >
-              ⏻
-            </button>
-          )}
-        </div>
+          <span className="hub-name">{hub?.name ?? 'Harmony Revive'}</span>
+          {hubs.length > 1 && <span className="chev">▾</span>}
+        </button>
+        <button type="button" className="icon" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+          <Icons.remote className="ic" />
+        </button>
       </header>
 
       {!online && <div className="banner">Can't reach the Harmony Revive server. Reconnecting…</div>}
@@ -144,51 +125,73 @@ export function App() {
       )}
 
       {hubs.length === 0 && online ? (
-        <Settings
-          hubs={hubs}
-          needsToken={needsToken}
-          onTokenSaved={() => setNeedsToken(false)}
-          onError={fail}
-          inline
-        />
+        <Settings hubs={hubs} needsToken={needsToken} onTokenSaved={() => setNeedsToken(false)} onError={fail} inline />
       ) : (
         <main>
+          {running ? (
+            <NowPlaying
+              label={running.label}
+              status={hub?.activityStatus === 'starting' ? 'Starting…' : 'On now'}
+              onOff={() => hub && api.powerOff(hub.id).catch(fail)}
+              offBusy={busy}
+            />
+          ) : (
+            <div className="idle-hero">
+              <Icons.power className="idle-ic" />
+              <div>
+                <strong>Everything's off</strong>
+                <span>Pick an activity to get started</span>
+              </div>
+            </div>
+          )}
+
           <section className="activities">
-            {activities.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className={`activity ${a.id === runningId ? 'active' : ''}`}
-                disabled={!hub?.connected || busy}
-                onClick={() => hub && api.startActivity(hub.id, a.id).catch(fail)}
-              >
-                {a.label}
-                {a.id === hub?.currentActivityId && hub?.activityStatus === 'starting' && <small>starting…</small>}
-              </button>
-            ))}
+            {activities.map((a) => {
+              const Icon = Icons[activityIcon(a.label)];
+              const isOn = a.id === runningId;
+              const isStarting = starting && a.id === hub?.currentActivityId;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`activity ${isOn ? 'active' : ''}`}
+                  style={{ ['--art' as string]: gradientFor(a.label) }}
+                  disabled={!hub?.connected || busy}
+                  onClick={() => hub && api.startActivity(hub.id, a.id).catch(fail)}
+                >
+                  <span className="art" aria-hidden="true">
+                    <Icon className="art-ic" />
+                  </span>
+                  <span className="activity-label">{a.label}</span>
+                  <span className="activity-state">
+                    {isStarting ? 'Starting…' : isOn ? 'On' : 'Start'}
+                  </span>
+                </button>
+              );
+            })}
           </section>
 
           {(devices.length > 0 || running) && (
-            <nav className="targets">
+            <nav className="targets" aria-label="Control a device">
               {running && (
-                <button
-                  type="button"
-                  className={target === running.id ? 'on' : ''}
-                  onClick={() => setTarget(running.id)}
-                >
-                  {running.label}
-                </button>
+                <Chip icon="remote" label={running.label} on={target === running.id} onClick={() => setTarget(running.id)} />
               )}
               {devices.map((d) => (
-                <button key={d.id} type="button" className={target === d.id ? 'on' : ''} onClick={() => setTarget(d.id)}>
-                  {d.label}
-                </button>
+                <Chip
+                  key={d.id}
+                  icon={deviceIcon(d.label, d.type)}
+                  label={d.label}
+                  on={target === d.id}
+                  onClick={() => setTarget(d.id)}
+                />
               ))}
             </nav>
           )}
 
           {targetGroups ? (
-            <Remote key={target} groups={targetGroups} onPress={press} />
+            <div className={`remote-wrap ${targetKind}`}>
+              <Remote key={target} groups={targetGroups} onPress={press} />
+            </div>
           ) : (
             hub?.connected && <p className="empty">Start an activity, or pick a device above to control it directly.</p>
           )}
@@ -198,6 +201,24 @@ export function App() {
       {settingsOpen && (
         <div className="sheet-backdrop" onClick={() => setSettingsOpen(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            {hubs.length > 1 && (
+              <div className="hub-switch">
+                {hubs.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    className={h.id === hub?.id ? 'on' : ''}
+                    onClick={() => {
+                      setHubId(h.id);
+                      setSettingsOpen(false);
+                    }}
+                  >
+                    <span className={`dot ${h.connected ? 'ok' : 'bad'}`} />
+                    {h.name}
+                  </button>
+                ))}
+              </div>
+            )}
             <Settings
               hubs={hubs}
               needsToken={needsToken}
@@ -214,6 +235,55 @@ export function App() {
 
       {toast && <div className="toast">{toast}</div>}
     </div>
+  );
+}
+
+function NowPlaying({
+  label,
+  status,
+  onOff,
+  offBusy,
+}: {
+  label: string;
+  status: string;
+  onOff: () => void;
+  offBusy: boolean;
+}) {
+  const Icon = Icons[activityIcon(label)];
+  return (
+    <div className="now-playing" style={{ ['--art' as string]: gradientFor(label) }}>
+      <span className="np-art" aria-hidden="true">
+        <Icon className="np-ic" />
+      </span>
+      <div className="np-text">
+        <small>{status}</small>
+        <strong>{label}</strong>
+      </div>
+      <button type="button" className="np-off" onClick={onOff} disabled={offBusy} aria-label="Turn everything off">
+        <Icons.power className="ic" />
+        <span>Off</span>
+      </button>
+    </div>
+  );
+}
+
+function Chip({
+  icon,
+  label,
+  on,
+  onClick,
+}: {
+  icon: keyof typeof Icons;
+  label: string;
+  on: boolean;
+  onClick: () => void;
+}) {
+  const Icon = Icons[icon];
+  return (
+    <button type="button" className={`chip ${on ? 'on' : ''}`} onClick={onClick}>
+      <Icon className="chip-ic" />
+      {label}
+    </button>
   );
 }
 
@@ -255,8 +325,8 @@ function Settings({
         <>
           <h2>Add your Harmony Hub</h2>
           <p className="hint">
-            The Harmony app's Versions screen for your hub shows its IP address (listed as Hub IP
-            Address, e.g. 10.0.0.26).
+            The Harmony app's Versions screen for your hub shows its IP address (listed as Hub IP Address, e.g.
+            10.0.0.26).
           </p>
         </>
       )}
